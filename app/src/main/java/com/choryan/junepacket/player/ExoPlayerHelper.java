@@ -1,6 +1,8 @@
 package com.choryan.junepacket.player;
 
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.Surface;
 import android.view.View;
@@ -32,6 +34,7 @@ public class ExoPlayerHelper implements LifecycleObserver {
 
     private static final String TAG = "ExoPlayerHelper";
     private SimpleDateFormat sdfMediaPosition = new SimpleDateFormat("mm:ss", Locale.ENGLISH);
+    private Handler handler = new Handler(Looper.getMainLooper());
 
     private static ExoPlayerHelper instance = new ExoPlayerHelper();
 
@@ -44,6 +47,7 @@ public class ExoPlayerHelper implements LifecycleObserver {
 
 
     public SimpleExoPlayer mExoPlayer;
+    public IMediaFramePositionListener iMediaFramePositionListener;
     private boolean repeatMode;
 
     public class ExoPlayerHelperParam {
@@ -92,7 +96,13 @@ public class ExoPlayerHelper implements LifecycleObserver {
             }
         });
         mExoPlayer.setVideoFrameMetadataListener((presentationTimeUs, releaseTimeNs, format, mediaFormat) -> {
-            Log.d(TAG, "setVideoFrameMetadataListener: ");
+            if (null != iMediaFramePositionListener) {
+                handler.post(()->{
+                    long contentPosition = mExoPlayer.getContentPosition();
+                    float percentage = (float) contentPosition / mExoPlayer.getDuration();
+                    iMediaFramePositionListener.onMediaPositionChange(presentationTimeUs, contentPosition, percentage);
+                });
+            }
         });
         mExoPlayer.setMediaItem(MediaItem.fromUri(param.mediaUri));
         mExoPlayer.setVideoSurface(param.targetSurface);
